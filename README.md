@@ -6,7 +6,7 @@ It assumes that each entry begins with a timestamp in this format: YYYY-MM-DD HH
 ## Run the tool
 
 ```bash
-ruby combine_json_logs.rb tests/test1.log tests/test2.log tests/test3.log                     
+ruby combine_json_logs.rb tests/test_1.log tests/test_2.log tests/test_3.log                     
 ```
 
 ## Output
