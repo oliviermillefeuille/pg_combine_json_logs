@@ -36,21 +36,14 @@ class CombineJsonLogs
 
   # Combines all logs, sorting them by their timestamps
   def combine_logs
-    until @log_file_handlers.empty?
-      earliest = get_earliest_timestamp
-
-      # loop in the reverse order to avoid index change when deleting elements
-      @timestamps.reverse_each.with_index do |timestamp, index|
-        if timestamp == earliest
-          fetch_until_next_timestamp_from_file(@timestamps.length - 1 - index)
-        end
-      end
+    while @log_file_handlers.any?
+      fetch_until_next_timestamp_from_file(get_earliest_index_timestamp)
     end
   end
 
-  # Get the earliest timestamp from the list
-  def get_earliest_timestamp
-    @timestamps.min
+  # Get the earliest index timestamp from the list
+  def get_earliest_index_timestamp
+    @timestamps.index(@timestamps.min)
   end
 
   # Fetch log entries from the file until the next timestamp is found
@@ -59,7 +52,7 @@ class CombineJsonLogs
     loop do
       log = read_new_log_line(index)
 
-      # remove all data for this file if it is EOF
+      # stop reading from this file handler if it is EOF
       if log.nil?
         remove_file_handler(index)
         return
@@ -77,34 +70,31 @@ class CombineJsonLogs
       end
     end
   end
+
+  # Reads a new line from the log file at the given index
+  def read_new_log_line(index)
+    @log_file_handlers[index].gets
+  end
+
+  # Removes the file handler, the log and the timestamp at the given index.
+  def remove_file_handler(index)
+    @log_file_handlers[index] = nil
+    @timestamps[index] = Time.now # maximum timestamp to ensure that this file handler is not selected again
+  end
+
+  # Extracts the timestamp from a log line. Returns nil if no timestamp found
+  def extract_timestamp(log)
+    match = /(.*UTC)/.match(log[0..22])
+    match ? Time.parse(match[1]) : nil
+  end
+
+  # Updates the log and the timestamp at the given index
+  def update_log_and_timestamp(index, log, timestamp)
+    @logs[index] = log
+    @timestamps[index] = timestamp
+  end
+
 end
 
-# Reads a new line from the log file at the given index
-def read_new_log_line(index)
-  @log_file_handlers[index].gets
-end
-
-# Removes the file handler, the log and the timestamp at the given index.
-def remove_file_handler(index)
-  @logs.delete_at(index)
-  @log_file_handlers.delete_at(index)
-  @timestamps.delete_at(index)
-end
-
-# Extracts the timestamp from a log line. Returns nil if no timestamp found
-def extract_timestamp(log)
-  match = /(.*UTC)/.match(log[0..22])
-  match ? Time.parse(match[1]) : nil
-end
-
-# Updates the log and the timestamp at the given index
-def update_log_and_timestamp(index, log, timestamp)
-  @logs[index] = log
-  @timestamps[index] = timestamp
-end
-
-# Run the combiner if this file is the main script
-if __FILE__ == $0
-  combiner = CombineJsonLogs.new
-  combiner.main(ARGV)
-end
+combiner = CombineJsonLogs.new
+combiner.main(ARGV)
