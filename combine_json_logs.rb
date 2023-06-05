@@ -30,6 +30,7 @@ class CombineJsonLogs
       log = file.gets
       @logs << log
       timestamp = extract_timestamp(log)
+      raise "No timestamp found in log file first line: '#{log[0..22]}'" + file.path if timestamp.nil?
       @timestamps << timestamp
     end
   end
@@ -84,7 +85,7 @@ class CombineJsonLogs
 
   # Extracts the timestamp from a log line. Returns nil if no timestamp found
   def extract_timestamp(log)
-    match = /(.*UTC)/.match(log[0..22])
+    match = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z|\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC)/.match(log[0..50])
     match ? Time.parse(match[1]) : nil
   end
 
